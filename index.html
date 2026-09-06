@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+  <title>PINTAR SIFIR by TZ EDU KIDS</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f8fafc;
+      color: #172554;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app-bg {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(59,130,246,.16), transparent 32%),
+        radial-gradient(circle at top right, rgba(168,85,247,.15), transparent 32%),
+        linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+    }
+
+    .card {
+      background: rgba(255,255,255,.94);
+      border-radius: 24px;
+      box-shadow: 0 12px 35px rgba(15,23,42,.08);
+    }
+
+    .answer-btn {
+      transition: transform .1s ease;
+      touch-action: manipulation;
+    }
+
+    .answer-btn:active {
+      transform: scale(.96);
+    }
+
+    .answer-btn:focus {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+
+    .no-select {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(.8); opacity: 0; }
+      70% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .pop {
+      animation: pop .35s ease;
+    }
+
+    @keyframes float {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-7px); }
+    }
+
+    .float {
+      animation: float 2.5s ease-in-out infinite;
+    }
+
+    .confetti {
+      position: fixed;
+      top: -20px;
+      width: 9px;
+      height: 14px;
+      z-index: 9999;
+      animation: jatuh 2.5s linear forwards;
+    }
+
+    @keyframes jatuh {
+      to {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .certificate-print {
+        box-shadow: none !important;
+        border: 3px solid #1e3a8a !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    /* =========================================================
+       PINTAR SIFIR V3.2
+       TZ EDU KIDS
+    ========================================================= */
+
+    const NAMA_APP = "PINTAR SIFIR";
+
+    const SIFIR = Array.from({ length: 11 }, (_, i) => i + 2);
+
+    const PENDEDAH_BIASA = Array.from({ length: 12 }, (_, i) => i + 1);
+    const PENDEDAH_JUARA = Array.from({ length: 11 }, (_, i) => i + 2);
+
+    const KUNCI = {
+      nama: "ps_name",
+      mastery: "ps_mastery",
+      champion: "ps_championPoints",
+      coins: "ps_coins",
+      achievements: "ps_achievements",
+      streak: "ps_streak",
+      sound: "ps_sound",
+      music: "ps_music",
+      lastPractice: "ps_lastPractice"
+    };
+
+    /* =========================================================
+       UTILITI
+    ========================================================= */
+
+    function campur(array) {
+      const hasil = [...array];
+
+      for (let i = hasil.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [hasil[i], hasil[j]] = [hasil[j], hasil[i]];
+      }
+
+      return hasil;
+    }
+
+    function ambilItem(array, jumlah) {
+      return campur(array).slice(0, jumlah);
+    }
+
+    function simpan(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {}
+    }
+
+    function baca(key, fallback) {
+      try {
+        const data = localStorage.getItem(key);
+        return data === null ? fallback : JSON.parse(data);
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function formatNombor(n) {
+      return Number(n || 0).toLocaleString("en-US");
+    }
+
+    function tahapDaripadaMata(mata) {
+      if (mata >= 1200) {
+        return {
+          nama: "JUARA SIFIR",
+          emoji: "🏆",
+          warna: "text-yellow-600",
+          bg: "bg-yellow-50",
+          julat: "1,200 – 1,600"
+        };
+      }
+
+      if (mata >= 800) {
+        return {
+          nama: "MAHIR",
+          emoji: "🔥",
+          warna: "text-red-600",
+          bg: "bg-red-50",
+          julat: "800 – 1,199"
+        };
+      }
+
+      if (mata >= 400) {
+        return {
+          nama: "PERTENGAHAN",
+          emoji: "⭐",
+          warna: "text-blue-600",
+          bg: "bg-blue-50",
+          julat: "400 – 799"
+        };
+      }
+
+      return {
+        nama: "PEMULA",
+        emoji: "🌱",
+        warna: "text-green-600",
+        bg: "bg-green-50",
+        julat: "0 – 399"
+      };
+    }
+
+    function binaPilihan(jawapan) {
+      const set = new Set([jawapan]);
+
+      const calon = [];
+
+      for (let beza = 1; beza <= 20; beza++) {
+        calon.push(jawapan + beza);
+        calon.push(jawapan - beza);
+      }
+
+      campur(calon).forEach(n => {
+        if (n > 0 && n <= 144 && set.size < 4) {
+          set.add(n);
+        }
+      });
+
+      while (set.size < 4) {
+        const rawak = Math.floor(Math.random() * 144) + 1;
+        set.add(rawak);
+      }
+
+      return campur([...set]);
+    }
+
+    function binaSoalanBiasa(sifir) {
+      const semua = campur(PENDEDAH_BIASA);
+
+      return semua.map(pendedah => {
+        const jawapan = sifir * pendedah;
+
+        return {
+          id: sifir + "-" + pendedah + "-" + Math.random(),
+          sifir,
+          pendedah,
+          jawapan,
+          pilihan: binaPilihan(jawapan)
+        };
+      }).slice(0, 10);
+    }
+
+    function binaSoalanJuara() {
+      const semua = [];
+
+      SIFIR.forEach(sifir => {
+        PENDEDAH_JUARA.forEach(pendedah => {
+          semua.push({
+            sifir,
+            pendedah,
+            jawapan: sifir * pendedah
+          });
+        });
+      });
+
+      return ambilItem(semua, 50).map(item => ({
+        id: item.sifir + "-" + item.pendedah + "-" + Math.random(),
+        sifir: item.sifir,
+        pendedah: item.pendedah,
+        jawapan: item.jawapan,
+        pilihan: binaPilihan(item.jawapan)
+      }));
+    }
+
+    function jumlahMata(master, champion) {
+      const jumlahSifir = SIFIR.reduce((total, s) => {
+        return total + Number(master[s] || 0);
+      }, 0);
+
+      return jumlahSifir + Number(champion || 0);
+    }
+
+    function sudahLengkap(master) {
+      return SIFIR.every(s => Number(master[s] || 0) >= 100);
+    }
+
+    function bunyiBetul(audioCtxRef, soundOnRef) {
+      if (!soundOnRef.current) return;
+
+      try {
+        const ctx = audioCtxRef.current || new (window.AudioContext || window.webkitAudioContext)();
+        audioCtxRef.current = ctx;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.frequency.value = 720;
+        osc.type = "sine";
+
+        gain.gain.setValueAtTime(.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.16, ctx.currentTime + .01);
+        gain.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + .22);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + .23);
+      } catch (e) {}
+    }
+
+    function bunyiSalah(audioCtxRef, soundOnRef) {
+      if (!soundOnRef.current) return;
+
+      try {
+        const ctx = audioCtxRef.current || new (window.AudioContext || window.webkitAudioContext)();
+        audioCtxRef.current = ctx;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.frequency.value = 180;
+        osc.type = "sawtooth";
+
+        gain.gain.setValueAtTime(.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(.12, ctx.currentTime + .01);
+        gain.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + .25);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + .26);
+      } catch (e) {}
+    }
+
+    function buatConfetti() {
+      const warna = [
+        "#ef4444",
+        "#3b82f6",
+        "#22c55e",
+        "#eab308",
+        "#a855f7",
+        "#ec4899"
+      ];
+
+      for (let i = 0; i < 80; i++) {
+        const el = document.createElement("div");
+
+        el.className = "confetti";
+
+        el.style.left = Math.random() * 100 + "vw";
+        el.style.backgroundColor = warna[Math.floor(Math.random() * warna.length)];
+        el.style.animationDelay = Math.random() * .8 + "s";
+        el.style.transform = "rotate(" + Math.random() * 360 + "deg)";
+
+        document.body.appendChild(el);
+
+        setTimeout(() => {
+          el.remove();
+        }, 3500);
+      }
+    }
+
+    /* =========================================================
+       APP
+    ========================================================= */
+
+    function App() {
+      const [paparan, setPaparan] = useState("utama");
+
+      const [nama, setNama] = useState(() => baca(KUNCI.nama, ""));
+
+      const [mastery, setMastery] = useState(() =>
+        baca(KUNCI.mastery, {})
+      );
+
+      const [championPoints, setChampionPoints] = useState(() =>
+        baca(KUNCI.champion, 0)
+      );
+
+      const [coins, setCoins] = useState(() =>
+        baca(KUNCI.coins, 0)
+      );
+
+      const [achievements, setAchievements] = useState(() =>
+        baca(KUNCI.achievements, [])
+      );
+
+      const [streak, setStreak] = useState(() =>
+        baca(KUNCI.streak, 0)
+      );
+
+      const [soundOn, setSoundOn] = useState(() =>
+        baca(KUNCI.sound, true)
+      );
+
+      const [musicOn, setMusicOn] = useState(() =>
+        baca(KUNCI.music, true)
+      );
+
+      const [selectedTable, setSelectedTable] = useState(null);
+      const [jenisPermainan, setJenisPermainan] = useState("biasa");
+
+      const [soalan, setSoalan] = useState([]);
+      const [soalanIndex, setSoalanIndex] = useState(0);
+      const [mata, setMata] = useState(0);
+      const [jawapanDipilih, setJawapanDipilih] = useState(null);
+      const [sedangJawab, setSedangJawab] = useState(false);
+      const [masa, setMasa] = useState(60);
+
+      const [keputusan, setKeputusan] = useState(null);
+
+      const audioCtxRef = useRef(null);
+      const musicRef = useRef(null);
+      const musicTimerRef = useRef(null);
+
+      const soundOnRef = useRef(soundOn);
+      const musicOnRef = useRef(musicOn);
+      const tamatRef = useRef(false);
+      const sudahInteraksiRef = useRef(false);
+
+      useEffect(() => {
+        soundOnRef.current = soundOn;
+        simpan(KUNCI.sound, soundOn);
+      }, [soundOn]);
+
+      useEffect(() => {
+        musicOnRef.current = musicOn;
+        simpan(KUNCI.music, musicOn);
+
+        if (!musicOn) {
+          hentikanMuzik();
+        } else if (sudahInteraksiRef.current) {
+          mulaMuzik();
+        }
+      }, [musicOn]);
+
+      useEffect(() => {
+        simpan(KUNCI.nama, nama);
+      }, [nama]);
+
+      useEffect(() => {
+        simpan(KUNCI.mastery, mastery);
+      }, [mastery]);
+
+      useEffect(() => {
+        simpan(KUNCI.champion, championPoints);
+      }, [championPoints]);
+
+      useEffect(() => {
+        simpan(KUNCI.coins, coins);
+      }, [coins]);
+
+      useEffect(() => {
+        simpan(KUNCI.achievements, achievements);
+      }, [achievements]);
+
+      useEffect(() => {
+        simpan(KUNCI.streak, streak);
+      }, [streak]);
+
+      /* =====================================================
+         MUZIK
+      ===================================================== */
+
+      function dapatAudio() {
+        try {
+          if (!audioCtxRef.current) {
+            audioCtxRef.current =
+              new (window.AudioContext || window.webkitAudioContext)();
+          }
+
+          if (audioCtxRef.current.state === "suspended") {
+            audioCtxRef.current.resume();
+          }
+
+          return audioCtxRef.current;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function mulaMuzik() {
+        if (!musicOnRef.current) return;
+
+        const ctx = dapatAudio();
+
+        if (!ctx) return;
+
+        if (musicRef.current) return;
+
+        const notes = [
+          261.63,
+          329.63,
+          392.00,
+          329.63,
+          293.66,
+          349.23,
+          440.00,
+          349.23
+        ];
+
+        let index = 0;
+
+        const mainGain = ctx.createGain();
+
+        mainGain.gain.value = 0.025;
+        mainGain.connect(ctx.destination);
+
+        musicRef.current = {
+          ctx,
+          mainGain
+        };
+
+        function mainkanNota() {
+          if (!musicRef.current || !musicOnRef.current) return;
+
+          const osc = ctx.createOscillator();
+
+          osc.type = "sine";
+          osc.frequency.value = notes[index % notes.length];
+
+          osc.connect(mainGain);
+
+          osc.start();
+
+          osc.stop(ctx.currentTime + .35);
+
+          index++;
+
+          musicTimerRef.current = setTimeout(mainkanNota, 420);
+        }
+
+        mainkanNota();
+      }
+
+      function hentikanMuzik() {
+        if (musicTimerRef.current) {
+          clearTimeout(musicTimerRef.current);
+          musicTimerRef.current = null;
+        }
+
+        if (musicRef.current) {
+          try {
+            musicRef.current.mainGain.disconnect();
+          } catch (e) {}
+
+          musicRef.current = null;
+        }
+      }
+
+      function aktifkanAudio() {
+        sudahInteraksiRef.current = true;
+
+        dapatAudio();
+
+        if (musicOnRef.current) {
+          mulaMuzik();
+        }
+      }
+
+      /* =====================================================
+         PENCAPAIAN
+      ===================================================== */
+
+      const SENARAI_PENCAPAIAN = [
+        {
+          id: "langkah",
+          emoji: "👣",
+          nama: "Langkah Pertama",
+          syarat: "Siap satu ujian"
+        },
+        {
+          id: "hebat",
+          emoji: "✨",
+          nama: "Hebat!",
+          syarat: "Dapat 100/100"
+        },
+        {
+          id: "lima",
+          emoji: "⭐",
+          nama: "5 Sifir",
+          syarat: "Kuasai 5 sifir"
+        },
+        {
+          id: "lengkap",
+          emoji: "🎯",
+          nama: "Lengkap!",
+          syarat: "Kuasai semua sifir"
+        },
+        {
+          id: "tahap400",
+          emoji: "🚀",
+          nama: "Naik Tahap",
+          syarat: "Capai 400 mata"
+        },
+        {
+          id: "tahap800",
+          emoji: "🔥",
+          nama: "Makin Mahir",
+          syarat: "Capai 800 mata"
+        },
+        {
+          id: "tahap1200",
+          emoji: "🏆",
+          nama: "Juara Sifir",
+          syarat: "Capai 1,200 mata"
+        },
+        {
+          id: "penuh",
+          emoji: "💯",
+          nama: "Juara Sifir 1,600",
+          syarat: "Capai 1,600 mata"
+        },
+        {
+          id: "streak3",
+          emoji: "🔥",
+          nama: "Konsisten",
+          syarat: "Streak 3 hari"
+        },
+        {
+          id: "streak7",
+          emoji: "🌟",
+          nama: "Luar Biasa!",
+          syarat: "Streak 7 hari"
+        },
+        {
+          id: "juara",
+          emoji: "👑",
+          nama: "Cabaran Juara",
+          syarat: "Siap Cabaran Juara"
+        }
+      ];
+
+      function tambahPencapaian(id) {
+        setAchievements(prev => {
+          if (prev.includes(id)) return prev;
+
+          return [...prev, id];
+        });
+      }
+
+      function semakPencapaian(mataBaru, masterBaru, championBaru) {
+        tambahPencapaian("langkah");
+
+        const bilanganSifir =
+          SIFIR.filter(s => Number(masterBaru[s] || 0) >= 100).length;
+
+        if (bilanganSifir >= 5) {
+          tambahPencapaian("lima");
+        }
+
+        if (sudahLengkap(masterBaru)) {
+          tambahPencapaian("lengkap");
+        }
+
+        if (mataBaru >= 400) {
+          tambahPencapaian("tahap400");
+        }
+
+        if (mataBaru >= 800) {
+          tambahPencapaian("tahap800");
+        }
+
+        if (mataBaru >= 1200) {
+          tambahPencapaian("tahap1200");
+        }
+
+        if (mataBaru >= 1600) {
+          tambahPencapaian("penuh");
+        }
+
+        if (championBaru > 0) {
+          tambahPencapaian("juara");
+        }
+      }
+
+      /* =====================================================
+         STREAK
+      ===================================================== */
+
+      function kemasKiniStreak() {
+        const hariIni = new Date().toISOString().split("T")[0];
+        const terakhir = baca(KUNCI.lastPractice, "");
+
+        if (terakhir === hariIni) {
+          return;
+        }
+
+        let streakBaru = 1;
+
+        if (terakhir) {
+          const tarikhLama = new Date(terakhir);
+          const tarikhBaru = new Date(hariIni);
+
+          const beza =
+            Math.round(
+              (tarikhBaru - tarikhLama) /
+              (1000 * 60 * 60 * 24)
+            );
+
+          if (beza === 1) {
+            streakBaru = streak + 1;
+          }
+        }
+
+        setStreak(streakBaru);
+        simpan(KUNCI.lastPractice, hariIni);
+
+        if (streakBaru >= 3) {
+          tambahPencapaian("streak3");
+        }
+
+        if (streakBaru >= 7) {
+          tambahPencapaian("streak7");
+        }
+      }
+
+      /* =====================================================
+         MULA PERMAINAN
+      ===================================================== */
+
+      function mulaSifir(sifir) {
+        aktifkanAudio();
+
+        setSelectedTable(sifir);
+        setJenisPermainan("biasa");
+        setKeputusan(null);
+
+        if (!nama.trim()) {
+          setPaparan("nama");
+          return;
+        }
+
+        mulaKuizTerus(sifir, "biasa");
+      }
+
+      function mulaKuizTerus(sifir, jenis) {
+        aktifkanAudio();
+
+        tamatRef.current = false;
+
+        const soalanBaru =
+          jenis === "juara"
+            ? binaSoalanJuara()
+            : binaSoalanBiasa(sifir);
+
+        setSoalan(soalanBaru);
+        setSoalanIndex(0);
+        setMata(0);
+        setJawapanDipilih(null);
+        setSedangJawab(false);
+        setMasa(jenis === "juara" ? 180 : 60);
+        setKeputusan(null);
+        setPaparan("kuiz");
+      }
+
+      function simpanNamaDanMula() {
+        aktifkanAudio();
+
+        const clean = nama.trim();
+
+        if (!clean) {
+          alert("Sila masukkan nama anak dahulu.");
+          return;
+        }
+
+        setNama(clean);
+
+        mulaKuizTerus(
+          jenisPermainan === "juara"
+            ? null
+            : selectedTable,
+          jenisPermainan
+        );
+      }
+
+      function bukaCabaranJuara() {
+        aktifkanAudio();
+
+        if (!sudahLengkap(mastery)) {
+          alert(
+            "Lengkapkan dahulu semua sifir 2 hingga 12 dengan markah 100/100."
+          );
+          return;
+        }
+
+        setJenisPermainan("juara");
+        setSelectedTable(null);
+
+        if (!nama.trim()) {
+          setPaparan("nama");
+          return;
+        }
+
+        mulaKuizTerus(null, "juara");
+      }
+
+      /* =====================================================
+         TIMER
+      ===================================================== */
+
+      useEffect(() => {
+        if (paparan !== "kuiz") return;
+        if (tamatRef.current) return;
+
+        const timer = setInterval(() => {
+          setMasa(prev => {
+            if (prev <= 1) {
+              clearInterval(timer);
+
+              setTimeout(() => {
+                tamatPermainan();
+              }, 0);
+
+              return 0;
+            }
+
+            return prev - 1;
+          });
+        }, 1000);
+
+        return () => clearInterval(timer);
+      }, [paparan, soalanIndex]);
+
+      /* =====================================================
+         JAWAPAN
+      ===================================================== */
+
+      function jawab(jawapan) {
+        if (sedangJawab) return;
+        if (tamatRef.current) return;
+
+        aktifkanAudio();
+
+        setSedangJawab(true);
+        setJawapanDipilih(jawapan);
+
+        const current = soalan[soalanIndex];
+
+        if (!current) return;
+
+        const betul = Number(jawapan) === Number(current.jawapan);
+
+        if (betul) {
+          bunyiBetul(audioCtxRef, soundOnRef);
+
+          setMata(prev => prev + 10);
+
+          setCoins(prev => prev + 5);
+        } else {
+          bunyiSalah(audioCtxRef, soundOnRef);
+        }
+
+        setTimeout(() => {
+          if (tamatRef.current) return;
+
+          if (soalanIndex >= soalan.length - 1) {
+            tamatPermainan(betul ? mata + 10 : mata);
+          } else {
+            setSoalanIndex(prev => prev + 1);
+            setJawapanDipilih(null);
+            setSedangJawab(false);
+          }
+        }, 650);
+      }
+
+      /* =====================================================
+         TAMAT PERMAINAN
+      ===================================================== */
+
+      function tamatPermainan(mataAkhirOverride = null) {
+        if (tamatRef.current) return;
+
+        tamatRef.current = true;
+
+        const mataAkhir =
+          mataAkhirOverride === null
+            ? mata
+            : mataAkhirOverride;
+
+        const skorMaksimum =
+          jenisPermainan === "juara" ? 500 : 100;
+
+        const mataNormal =
+          jenisPermainan === "biasa"
+            ? Math.max(0, Math.min(100, mataAkhir))
+            : mataAkhir;
+
+        const masterLama = { ...mastery };
+        const championLama = championPoints;
+
+        let masterBaru = { ...mastery };
+        let championBaru = championPoints;
+
+        if (jenisPermainan === "biasa" && selectedTable) {
+          const skorLama = Number(masterBaru[selectedTable] || 0);
+
+          if (mataNormal > skorLama) {
+            masterBaru[selectedTable] = mataNormal;
+          }
+        }
+
+        if (jenisPermainan === "juara") {
+          championBaru = Math.max(
+            Number(championBaru || 0),
+            Math.min(500, mataAkhir)
+          );
+        }
+
+        const mataSebelum = jumlahMata(
+          masterLama,
+          championLama
+        );
+
+        const mataSekarang = jumlahMata(
+          masterBaru,
+          championBaru
+        );
+
+        setMastery(masterBaru);
+        setChampionPoints(championBaru);
+
+        kemasKiniStreak();
+
+        semakPencapaian(
+          mataSekarang,
+          masterBaru,
+          championBaru
+        );
+
+        const tahapSebelum =
+          tahapDaripadaMata(mataSebelum).nama;
+
+        const tahapSekarang =
+          tahapDaripadaMata(mataSekarang).nama;
+
+        const naikTahap =
+          tahapSebelum !== tahapSekarang &&
+          mataSekarang > mataSebelum;
+
+        const penuh =
+          mataSekarang >= 1600;
+
+        const hebat =
+          mataNormal === skorMaksimum;
+
+        setKeputusan({
+          skor: mataNormal,
+          maksimum: skorMaksimum,
+          mataKeseluruhan: mataSekarang,
+          naikTahap,
+          penuh,
+          hebat,
+          jenis: jenisPermainan,
+          sifir: selectedTable
+        });
+
+        setPaparan("keputusan");
+
+        if (hebat || naikTahap || penuh) {
+          setTimeout(() => {
+            buatConfetti();
+          }, 150);
+        }
+      }
+
+      /* =====================================================
+         NAVIGASI
+      ===================================================== */
+
+      function pergiUtama() {
+        tamatRef.current = true;
+
+        setSedangJawab(false);
+        setJawapanDipilih(null);
+        setPaparan("utama");
+      }
+
+      function bukaPencapaian() {
+        aktifkanAudio();
+        setPaparan("pencapaian");
+      }
+
+      function bukaSijil() {
+        aktifkanAudio();
+        setPaparan("sijil");
+      }
+
+      /* =====================================================
+         DATA
+      ===================================================== */
+
+      const jumlahKeseluruhan =
+        jumlahMata(mastery, championPoints);
+
+      const tahap =
+        tahapDaripadaMata(jumlahKeseluruhan);
+
+      const bilanganSifir =
+        SIFIR.filter(
+          s => Number(mastery[s] || 0) >= 100
+        ).length;
+
+      /* =====================================================
+         PAPARAN UTAMA
+      ===================================================== */
+
+      function PaparanUtama() {
+        return (
+          <div className="min-h-screen app-bg px-4 py-5">
+            <div className="max-w-xl mx-auto">
+
+              {/* HEADER */}
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <div className="text-sm font-bold text-blue-600">
+                    TZ EDU KIDS
+                  </div>
+
+                  <h1 className="text-3xl font-black text-blue-950">
+                    {NAMA_APP}
+                  </h1>
+                </div>
+
+                <button
+                  onClick={() => {
+                    aktifkanAudio();
+                    setSoundOn(v => !v);
+                  }}
+                  className="w-12 h-12 rounded-2xl bg-white shadow flex items-center justify-center text-2xl"
+                >
+                  {soundOn ? "🔊" : "🔇"}
+                </button>
+              </div>
+
+              {/* PROFIL */}
+              <div className="card p-5 mb-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm opacity-90">
+                      Hai!
+                    </p>
+
+                    <h2 className="text-2xl font-black">
+                      {nama || "Pejuang Sifir"} 👋
+                    </h2>
+
+                    <div className="mt-2 inline-flex px-3 py-1 rounded-full bg-white/20 text-sm font-bold">
+                      {tahap.emoji} {tahap.nama}
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-3xl font-black">
+                      {formatNombor(jumlahKeseluruhan)}
+                    </div>
+
+                    <div className="text-xs opacity-90">
+                      / 1,600 mata
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 h-3 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-white rounded-full transition-all"
+                    style={{
+                      width:
+                        Math.min(
+                          100,
+                          (jumlahKeseluruhan / 1600) * 100
+                        ) + "%"
+                    }}
+                  />
+                </div>
+
+                <div className="flex justify-between mt-3 text-sm">
+                  <span>🪙 {formatNombor(coins)} syiling</span>
+                  <span>🔥 {streak} hari</span>
+                </div>
+              </div>
+
+              {/* MENU */}
+              <div className="grid grid-cols-2 gap-3 mb-5">
+
+                <button
+                  onClick={() => {
+                    aktifkanAudio();
+                    setPaparan("pencapaian");
+                  }}
+                  className="card p-4 text-left bg-white"
+                >
+                  <div className="text-3xl mb-2">🏅</div>
+                  <div className="font-black text-blue-950">
+                    Pencapaian
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {achievements.length} / {SENARAI_PENCAPAIAN.length}
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    aktifkanAudio();
+                    setPaparan("sijil");
+                  }}
+                  className="card p-4 text-left bg-white"
+                >
+                  <div className="text-3xl mb-2">📜</div>
+                  <div className="font-black text-blue-950">
+                    Sijil Pencapaian
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Lihat pencapaian
+                  </div>
+                </button>
+
+              </div>
+
+              {/* PILIH SIFIR */}
+              <div className="card p-5 mb-5">
+                <div className="flex justify-between items-center mb-4">
+                  <div>
+                    <h2 className="text-xl font-black text-blue-950">
+                      Pilih Sifir
+                    </h2>
+
+                    <p className="text-sm text-slate-500">
+                      Latih satu sifir pada satu masa
+                    </p>
+                  </div>
+
+                  <div className="text-2xl">
+                    📚
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+
+                  {SIFIR.map((sifir, index) => {
+                    const skor = Number(mastery[sifir] || 0);
+
+                    const latar = [
+                      "bg-blue-100",
+                      "bg-purple-100",
+                      "bg-green-100",
+                      "bg-yellow-100",
+                      "bg-pink-100",
+                      "bg-cyan-100"
+                    ][index % 6];
+
+                    return (
+                      <button
+                        key={sifir}
+                        onClick={() => mulaSifir(sifir)}
+                        className={
+                          "rounded-2xl p-4 " +
+                          latar +
+                          " text-center"
+                        }
+                      >
+                        <div className="text-2xl font-black text-blue-950">
+                          {sifir}
+                        </div>
+
+                        <div className="text-xs font-bold text-slate-600 mt-1">
+                          {skor}/100
+                        </div>
+
+                        <div className="h-1.5 bg-white/70 rounded-full mt-2 overflow-hidden">
+                          <div
+                            className="h-full bg-blue-600 rounded-full"
+                            style={{ width: skor + "%" }}
+                          />
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                </div>
+              </div>
+
+              {/* CABARAN JUARA */}
+              <button
+                onClick={bukaCabaranJuara}
+                className={
+                  "w-full card p-5 text-left mb-5 " +
+                  (
+                    sudahLengkap(mastery)
+                      ? "bg-gradient-to-r from-yellow-300 via-orange-300 to-pink-300"
+                      : "bg-slate-100"
+                  )
+                }
+              >
+                <div className="flex items-center gap-4">
+
+                  <div className="text-5xl">
+                    🏆
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="font-black text-xl text-blue-950">
+                      Cabaran Juara
+                    </div>
+
+                    <div className="text-sm text-slate-700 mt-1">
+                      50 soalan sifir 2–12
+                    </div>
+
+                    <div className="text-xs font-bold mt-1">
+                      {sudahLengkap(mastery)
+                        ? "🔓 Cabaran dibuka!"
+                        : "🔒 Lengkapkan semua sifir 2–12 dahulu"}
+                    </div>
+                  </div>
+
+                  <div className="text-2xl">
+                    →
+                  </div>
+
+                </div>
+              </button>
+
+              {/* TETAPAN */}
+              <div className="card p-5">
+
+                <h3 className="font-black text-blue-950 mb-4">
+                  Tetapan
+                </h3>
+
+                <div className="flex items-center justify-between py-3 border-b">
+                  <div>
+                    <div className="font-bold">
+                      🔊 Bunyi
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Bunyi betul dan salah
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      aktifkanAudio();
+                      setSoundOn(v => !v);
+                    }}
+                    className={
+                      "w-14 h-8 rounded-full p-1 transition " +
+                      (soundOn ? "bg-blue-600" : "bg-slate-300")
+                    }
+                  >
+                    <div
+                      className={
+                        "w-6 h-6 rounded-full bg-white transition " +
+                        (soundOn ? "translate-x-6" : "")
+                      }
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between py-3">
+                  <div>
+                    <div className="font-bold">
+                      🎵 Muzik
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Muzik latar sepanjang aplikasi
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      aktifkanAudio();
+                      setMusicOn(v => !v);
+                    }}
+                    className={
+                      "w-14 h-8 rounded-full p-1 transition " +
+                      (musicOn ? "bg-purple-600" : "bg-slate-300")
+                    }
+                  >
+                    <div
+                      className={
+                        "w-6 h-6 rounded-full bg-white transition " +
+                        (musicOn ? "translate-x-6" : "")
+                      }
+                    />
+                  </button>
+                </div>
+
+              </div>
+
+              <div className="text-center text-xs text-slate-400 mt-6">
+                PINTAR SIFIR by TZ EDU KIDS
+              </div>
+
+            </div>
+          </div>
+        );
+      }
+
+      /* =====================================================
+         PAPARAN NAMA
+      ===================================================== */
+
+      function PaparanNama() {
+        return (
+          <div className="min-h-screen app-bg flex items-center justify-center px-4">
+
+            <div className="max-w-md w-full">
+
+              <div className="text-center mb-8">
+                <div className="text-6xl mb-4 float">
+                  ✏️
+                </div>
+
+                <h1 className="text-3xl font-black text-blue-950">
+                  Jom Belajar Sifir!
+                </h1>
+
+                <p className="text-slate-500 mt-2">
+                  Masukkan nama anak untuk mula bermain.
+                </p>
+              </div>
+
+              <div className="card p-6">
+
+                <label className="block font-bold text-blue-950 mb-2">
+                  Nama anak
+                </label>
+
+                <input
+                  value={nama}
+                  onChange={e => setNama(e.target.value)}
+                  onFocus={aktifkanAudio}
+                  placeholder="Contoh: Aisyah"
+                  className="w-full border-2 border-slate-200 rounded-2xl px-4 py-4 text-lg outline-none focus:border-blue-500"
+                  maxLength={30}
+                />
+
+                <button
+                  onClick={simpanNamaDanMula}
+                  className="w-full mt-4 py-4 rounded-2xl bg-blue-600 text-white font-black text-lg"
+                >
+                  Mula 🚀
+                </button>
+
+                <button
+                  onClick={pergiUtama}
+                  className="w-full mt-3 py-3 rounded-2xl bg-slate-100 text-slate-700 font-bold"
+                >
+                  Kembali
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+        );
+      }
+
+      /* =====================================================
+         PAPARAN KUIZ
+      ===================================================== */
+
+      function PaparanKuiz() {
+        const current = soalan[soalanIndex];
+
+        if (!current) {
+          return null;
+        }
+
+        const peratusMasa =
+          jenisPermainan === "juara"
+            ? (masa / 180) * 100
+            : (masa / 60) * 100;
+
+        return (
+          <div className="min-h-screen app-bg px-4 py-5 no-select">
+
+            <div className="max-w-xl mx-auto">
+
+              {/* HEADER */}
+              <div className="flex items-center justify-between mb-4">
+
+                <button
+                  onClick={pergiUtama}
+                  className="px-4 py-2 rounded-xl bg-white shadow text-slate-700 font-bold"
+                >
+                  ← Keluar
+                </button>
+
+                <div className="text-center">
+                  <div className="text-xs text-slate-500">
+                    {jenisPermainan === "juara"
+                      ? "CABARAN JUARA"
+                      : "SIFIR " + selectedTable}
+                  </div>
+
+                  <div className="font-black text-blue-950">
+                    {soalanIndex + 1} / {soalan.length}
+                  </div>
+                </div>
+
+                <div className="px-4 py-2 rounded-xl bg-white shadow font-black text-blue-700">
+                  🪙 {mata}
+                </div>
+
+              </div>
+
+              {/* TIMER */}
+              <div className="card p-3 mb-5">
+
+                <div className="flex justify-between text-sm font-bold mb-2">
+                  <span>
+                    ⏱️ Masa
+                  </span>
+
+                  <span
+                    className={
+                      masa <= 10
+                        ? "text-red-600"
+                        : "text-blue-700"
+                    }
+                  >
+                    {masa}s
+                  </span>
+                </div>
+
+                <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className={
+                      "h-full rounded-full transition-all " +
+                      (masa <= 10
+                        ? "bg-red-500"
+                        : "bg-blue-500")
+                    }
+                    style={{
+                      width: Math.max(0, peratusMasa) + "%"
+                    }}
+                  />
+                </div>
+
+              </div>
+
+              {/* SOALAN */}
+              <div className="card p-7 mb-5 text-center">
+
+                <div className="text-sm font-bold text-slate-500 mb-4">
+                  Berapakah jawapannya?
+                </div>
+
+                <div className="text-5xl font-black text-blue-950">
+                  {current.pendedah} × {current.sifir}
+                </div>
+
+              </div>
+
+              {/* PILIHAN */}
+              <div className="grid grid-cols-2 gap-4">
+
+                {current.pilihan.map((pilihan) => {
+
+                  const sudahJawab =
+                    jawapanDipilih !== null;
+
+                  let kelas =
+                    "answer-btn w-full min-h-[82px] rounded-3xl bg-white shadow-lg text-3xl font-black text-blue-950 border-2 border-white";
+
+                  if (sudahJawab) {
+
+                    if (pilihan === current.jawapan) {
+                      kelas =
+                        "answer-btn w-full min-h-[82px] rounded-3xl bg-green-500 text-white shadow-lg text-3xl font-black border-2 border-green-500";
+                    } else if (
+                      pilihan === jawapanDipilih
+                    ) {
+                      kelas =
+                        "answer-btn w-full min-h-[82px] rounded-3xl bg-red-500 text-white shadow-lg text-3xl font-black border-2 border-red-500";
+                    }
+                  }
+
+                  return (
+                    <button
+                      key={pilihan}
+                      disabled={sedangJawab}
+                      onClick={() => jawab(pilihan)}
+                      className={kelas}
+                    >
+                      {pilihan}
+                    </button>
+                  );
+                })}
+
+              </div>
+
+              <div className="text-center mt-6 text-sm text-slate-500">
+                Jawapan betul = +10 mata &nbsp; • &nbsp; +5 syiling
+              </div>
+
+            </div>
+
+          </div>
+        );
+      }
+
+      /* =====================================================
+         PAPARAN KEPUTUSAN
+      ===================================================== */
+
+      function PaparanKeputusan() {
+        if (!keputusan) return null;
+
+        const hebat = keputusan.hebat;
+        const penuh = keputusan.penuh;
+        const naik = keputusan.naikTahap;
+
+        return (
+          <div className="min-h-screen app-bg px-4 py-8">
+
+            <div className="max-w-md mx-auto">
+
+              <div className="card p-7 text-center pop">
+
+                <div className="text-7xl mb-4">
+                  {penuh
+                    ? "🏆"
+                    : hebat
+                    ? "🎉"
+                    : "👏"}
+                </div>
+
+                <h1 className="text-3xl font-black text-blue-950">
+                  {penuh
+                    ? "JUARA SIFIR!"
+                    : hebat
+                    ? "Hebat!"
+                    : "Bagus!"}
+                </h1>
+
+                <p className="text-slate-500 mt-2">
+                  {keputusan.jenis === "juara"
+                    ? "Cabaran Juara selesai!"
+                    : "Ujian sifir selesai!"}
+                </p>
+
+                <div className="my-7">
+
+                  <div className="text-6xl font-black text-blue-600">
+                    {keputusan.skor}
+                  </div>
+
+                  <div className="text-slate-500 font-bold">
+                    daripada {keputusan.maksimum} mata
+                  </div>
+
+                </div>
+
+                <div className="bg-blue-50 rounded-2xl p-4 mb-5">
+
+                  <div className="text-sm text-slate-500">
+                    Jumlah mata keseluruhan
+                  </div>
+
+                  <div className="text-3xl font-black text-blue-950">
+                    {formatNombor(keputusan.mataKeseluruhan)}
+                    /1,600
+                  </div>
+
+                  <div className="mt-1 font-bold">
+                    {tahapDaripadaMata(
+                      keputusan.mataKeseluruhan
+                    ).emoji}{" "}
+                    {tahapDaripadaMata(
+                      keputusan.mataKeseluruhan
+                    ).nama}
+                  </div>
+
+                </div>
+
+                {naik && (
+                  <div className="bg-yellow-100 rounded-2xl p-4 mb-4 font-black text-yellow-800">
+                    🚀 Tahniah! Anda naik tahap!
+                  </div>
+                )}
+
+                {penuh && (
+                  <div className="bg-yellow-100 rounded-2xl p-4 mb-4 font-black text-yellow-800">
+                    🏆 Anda telah menjadi JUARA SIFIR!
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    aktifkanAudio();
+
+                    if (keputusan.jenis === "juara") {
+                      mulaKuizTerus(null, "juara");
+                    } else {
+                      mulaKuizTerus(
+                        keputusan.sifir,
+                        "biasa"
+                      );
+                    }
+                  }}
+                  className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black text-lg"
+                >
+                  Cuba Lagi 🔄
+                </button>
+
+                <button
+                  onClick={pergiUtama}
+                  className="w-full mt-3 py-4 rounded-2xl bg-slate-100 text-slate-700 font-bold"
+                >
+                  Utama
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+        );
+      }
+
+      /* =====================================================
+         PAPARAN PENCAPAIAN
+      ===================================================== */
+
+      function PaparanPencapaian() {
+        return (
+          <div className="min-h-screen app-bg px-4 py-6">
+
+            <div className="max-w-xl mx-auto">
+
+              <div className="flex items-center justify-between mb-5">
+
+                <div>
+                  <div className="text-sm text-blue-600 font-bold">
+                    PINTAR SIFIR
+                  </div>
+
+                  <h1 className="text-3xl font-black text-blue-950">
+                    Pencapaian
+                  </h1>
+                </div>
+
+                <button
+                  onClick={pergiUtama}
+                  className="px-4 py-2 rounded-xl bg-white shadow font-bold"
+                >
+                  Utama
+                </button>
+
+              </div>
+
+              <div className="card p-5 mb-5 bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+
+                <div className="text-sm opacity-90">
+                  Pencapaian diperoleh
+                </div>
+
+                <div className="text-4xl font-black mt-1">
+                  {achievements.length}
+                  <span className="text-lg opacity-80">
+                    /{SENARAI_PENCAPAIAN.length}
+                  </span>
+                </div>
+
+              </div>
+
+              <div className="space-y-3">
+
+                {SENARAI_PENCAPAIAN.map(item => {
+
+                  const sudah =
+                    achievements.includes(item.id);
+
+                  return (
+                    <div
+                      key={item.id}
+                      className={
+                        "card p-4 flex items-center gap-4 " +
+                        (
+                          sudah
+                            ? "bg-white"
+                            : "bg-slate-100 opacity-60"
+                        )
+                      }
+                    >
+
+                      <div className="text-4xl">
+                        {sudah ? item.emoji : "🔒"}
+                      </div>
+
+                      <div className="flex-1">
+
+                        <div className="font-black text-blue-950">
+                          {item.nama}
+                        </div>
+
+                        <div className="text-sm text-slate-500">
+                          {item.syarat}
+                        </div>
+
+                      </div>
+
+                      {sudah && (
+                        <div className="text-green-500 font-black">
+                          ✓
+                        </div>
+                      )}
+
+                    </div>
+                  );
+
+                })}
+
+              </div>
+
+            </div>
+
+          </div>
+        );
+      }
+
+      /* =====================================================
+         PAPARAN SIJIL
+      ===================================================== */
+
+      function PaparanSijil() {
+        const juara =
+          jumlahKeseluruhan >= 1600;
+
+        const tarikh =
+          new Date().toLocaleDateString(
+            "ms-MY",
+            {
+              day: "numeric",
+              month: "long",
+              year: "numeric"
+            }
+          );
+
+        return (
+          <div className="min-h-screen app-bg px-4 py-6">
+
+            <div className="max-w-xl mx-auto">
+
+              <div className="flex justify-between items-center mb-5 no-print">
+
+                <div>
+                  <div className="text-sm text-blue-600 font-bold">
+                    PINTAR SIFIR
+                  </div>
+
+                  <h1 className="text-3xl font-black text-blue-950">
+                    Sijil Pencapaian
+                  </h1>
+                </div>
+
+                <button
+                  onClick={pergiUtama}
+                  className="px-4 py-2 rounded-xl bg-white shadow font-bold"
+                >
+                  Utama
+                </button>
+
+              </div>
+
+              <div className="certificate-print bg-white rounded-3xl p-7 border-4 border-blue-900 shadow-xl text-center">
+
+                {/* TIADA CROWN DI SINI */}
+                <div className="text-sm font-bold tracking-widest text-blue-600">
+                  TZ EDU KIDS
+                </div>
+
+                <h1 className="text-4xl font-black text-blue-950 mt-2">
+                  PINTAR SIFIR
+                </h1>
+
+                <div className="w-24 h-1 bg-blue-600 mx-auto my-5 rounded-full" />
+
+                <div className="text-sm text-slate-500">
+                  SIJIL PENCAPAIAN
+                </div>
+
+                <div className="mt-8 text-slate-500">
+                  Dengan ini disahkan bahawa
+                </div>
+
+                <div className="text-4xl font-black text-blue-950 mt-3 break-words">
+                  {nama || "Nama Anak"}
+                </div>
+
+                <div className="mt-7 text-slate-500">
+                  telah menyelesaikan latihan
+                </div>
+
+                <div className="text-2xl font-black text-blue-700 mt-2">
+                  Sifir 2 hingga 12
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-8 text-left">
+
+                  <div className="bg-blue-50 rounded-2xl p-4">
+                    <div className="text-xs text-slate-500">
+                      Tahap
+                    </div>
+                    <div className="font-black text-blue-950">
+                      {tahap.emoji} {tahap.nama}
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 rounded-2xl p-4">
+                    <div className="text-xs text-slate-500">
+                      Mata
+                    </div>
+                    <div className="font-black text-blue-950">
+                      {formatNombor(jumlahKeseluruhan)} / 1,600
+                    </div>
+                  </div>
+
+                </div>
+
+                {juara && (
+                  <div className="mt-7 rounded-3xl bg-gradient-to-r from-yellow-300 via-orange-300 to-pink-300 p-5">
+
+                    <div className="text-4xl">
+                      🏆
+                    </div>
+
+                    <div className="text-2xl font-black text-blue-950 mt-2">
+                      JUARA SIFIR
+                    </div>
+
+                    <div className="text-sm font-bold text-slate-700 mt-1">
+                      1,600 / 1,600 MATA
+                    </div>
+
+                  </div>
+                )}
+
+                <div className="mt-8 text-sm text-slate-500">
+                  Tarikh pencapaian
+                </div>
+
+                <div className="font-bold text-blue-950 mt-1">
+                  {tarikh}
+                </div>
+
+              </div>
+
+              <div className="no-print mt-5 space-y-3">
+
+                <button
+                  onClick={() => window.print()}
+                  className="w-full py-4 rounded-2xl bg-blue-600 text-white font-black"
+                >
+                  🖨️ Cetak / Simpan Sijil
+                </button>
+
+                <button
+                  onClick={pergiUtama}
+                  className="w-full py-4 rounded-2xl bg-white shadow font-bold"
+                >
+                  Kembali ke Utama
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+        );
+      }
+
+      /* =====================================================
+         RENDER
+      ===================================================== */
+
+      return (
+        <>
+          {paparan === "utama" && <PaparanUtama />}
+
+          {paparan === "nama" && <PaparanNama />}
+
+          {paparan === "kuiz" && <PaparanKuiz />}
+
+          {paparan === "keputusan" && <PaparanKeputusan />}
+
+          {paparan === "pencapaian" && <PaparanPencapaian />}
+
+          {paparan === "sijil" && <PaparanSijil />}
+        </>
+      );
+    }
+
+    /* =========================================================
+       START APP
+    ========================================================= */
+
+    const root = ReactDOM.createRoot(
+      document.getElementById("root")
+    );
+
+    root.render(<App />);
+  </script>
+</body>
+</html>
